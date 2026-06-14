@@ -23,10 +23,11 @@ jobs:
 
     - name: Install System Dependencies (Linux)
       if: runner.os == 'Linux'
+      # We added xvfb to the apt-get install list here
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+          xvfb libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
           libgstreamer1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good
 
     - name: Install Core Dependencies
@@ -39,7 +40,13 @@ jobs:
       if: runner.os == 'Windows'
       run: pip install kivy_deps.angle
 
-    - name: Build with PyInstaller
+    - name: Build with PyInstaller (Linux)
+      if: runner.os == 'Linux'
+      # xvfb-run wraps PyInstaller and provides the fake monitor
+      run: xvfb-run --auto-servernum pyinstaller --onefile --windowed --name Strelizia-HR-System main.py
+
+    - name: Build with PyInstaller (Windows)
+      if: runner.os == 'Windows'
       env:
         KIVY_GL_BACKEND: angle_sdl2
       run: pyinstaller --onefile --windowed --name Strelizia-HR-System main.py

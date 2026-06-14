@@ -3,11 +3,10 @@ name: Build Executables
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # This adds a "Run workflow" button in GitHub so you can trigger it manually
+  workflow_dispatch:
 
 jobs:
   build:
-    # This matrix runs the job twice: once on Linux, once on Windows
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -20,8 +19,8 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11' # Adjust this to match your development environment
-        
+        python-version: '3.11' 
+
     - name: Install System Dependencies (Linux)
       if: runner.os == 'Linux'
       run: |
@@ -29,21 +28,24 @@ jobs:
         sudo apt-get install -y \
           libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
           libgstreamer1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good
-    - name: Install Dependencies
+
+    - name: Install Core Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller kivy_deps.angle
-        # If you have external libraries (like Kivy), list them in a requirements.txt file
+        pip install pyinstaller
         pip install -r requirements.txt 
+
+    - name: Install Windows-Specific Dependencies
+      if: runner.os == 'Windows'
+      run: pip install kivy_deps.angle
 
     - name: Build with PyInstaller
       env:
-        kivy_GL_BACKEND: angle_sdl2
+        KIVY_GL_BACKEND: angle_sdl2
       run: pyinstaller --onefile --windowed --name Strelizia-HR-System main.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        # Appends the OS name to the download folder so you can tell them apart
         name: Strelizia-HR-System-${{ matrix.os }}
         path: dist/Strelizia-HR-System*

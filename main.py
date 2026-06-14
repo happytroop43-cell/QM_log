@@ -615,7 +615,7 @@ class AnalyticsScreen(Screen):
         
         for file in target_files:
             # Note: Using absolute paths so the browser can read local images
-            img_src = os.path.abspath(os.path.join(QR_DIR, file))py
+            img_src = os.path.abspath(os.path.join(QR_DIR, file))
             name_label = file.replace('.png', '')
             html_content += f'<div class="card"><img src="{img_src}"><h4>{name_label}</h4></div>'
 

@@ -32,13 +32,13 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller
+        pip install pyinstaller kivy_deps.angle
         # If you have external libraries (like Kivy), list them in a requirements.txt file
         pip install -r requirements.txt 
 
     - name: Build with PyInstaller
-      # --onefile packages everything into a single binary
-      # --windowed hides the console/terminal window when the app runs
+      env:
+        kivy_GL_BACKEND: angle_sdl2
       run: pyinstaller --onefile --windowed --name Strelizia-HR-System main.py
 
     - name: Upload Artifact

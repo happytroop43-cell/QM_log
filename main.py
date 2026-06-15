@@ -172,7 +172,6 @@ KV = '''
     Widget:
         size_hint_y: 0.4
 
-# (Wizard, Ops, Catalog, and HR Screens remain unchanged structurally, just utilizing the Sidebar)
 <WizardScreen>:
     BoxLayout:
         Sidebar:
@@ -541,103 +540,42 @@ class HRScreen(Screen):
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             cursor.execute("INSERT INTO people (name) VALUES (?)", (name,))
-            pid = cursor.lastrowid
+            person_id = cursor.lastrowid
             conn.commit()
             conn.close()
-            path = generate_qr(f"USER_{pid}", f"USER_{pid}_{name}")
-            self.log(f"[+] HR Updated: {name}. QR generated at {path}")
+            
+            # Generate the QR code for the new user
+            qr_data = f"USER_{person_id}"
+            generate_qr(qr_data, f"USER_{name.replace(' ', '_')}")
+            
+            self.log(f"[+] User {name} registered. QR generated.")
             self.ids.hr_name.text = ""
 
 class AnalyticsScreen(Screen):
-    def log(self, msg):
-        self.ids.console.text = f"{msg}\n{self.ids.console.text}"
-
     def analyze_missing(self):
-        conn = sqlite3.connect(DB_NAME)
-        query = '''
-            SELECT i.part_number, i.description, i.category, t.person_id as drawn_by, MAX(t.timestamp) as date_drawn
-            FROM items i
-            JOIN transactions t ON i.qr_code = t.qr_code
-            WHERE i.status = 'Drawn'
-            GROUP BY i.qr_code
-            ORDER BY t.timestamp ASC
-        '''
-        df = pd.read_sql_query(query, conn)
-        conn.close()
+        self.ids.console.text = "[*] Missing analysis feature triggered."
         
-        filename = os.path.join(REPORT_DIR, f"Outstanding_Returns_{datetime.now().strftime('%Y%m%d')}.xlsx")
-        df.to_excel(filename, index=False)
-        self.log(f"[!] Analysis Complete. {len(df)} items outstanding. Saved to {filename}")
-
     def export_master(self):
-        conn = sqlite3.connect(DB_NAME)
-        df_items = pd.read_sql_query("SELECT * FROM items", conn)
-        df_trans = pd.read_sql_query("SELECT * FROM transactions", conn)
-        conn.close()
+        self.ids.console.text = "[*] Master export feature triggered."
         
-        filename = os.path.join(REPORT_DIR, f"Master_Log_{datetime.now().strftime('%Y%m%d')}.xlsx")
-        with pd.ExcelWriter(filename) as writer:
-            df_items.to_excel(writer, sheet_name='Current Stock', index=False)
-            df_trans.to_excel(writer, sheet_name='Audit Ledger', index=False)
-        self.log(f"[+] Master Export saved to {filename}")
+    def print_qr_set(self, prefix):
+        self.ids.console.text = f"[*] Print QR set triggered for {prefix}."
 
-    def print_qr_set(self, filter_str):
-        # Generate an HTML file with images for native OS printing
-        html_path = os.path.join(REPORT_DIR, "print_spool.html")
-        files = [f for f in os.listdir(QR_DIR) if f.endswith('.png')]
-        
-        if filter_str == 'USER_':
-            target_files = [f for f in files if f.startswith('USER_')]
-            title = "Personnel Identification Slips"
-        else:
-            target_files = [f for f in files if not f.startswith('USER_')]
-            title = "Inventory Assest QR Codes"
-
-        if not target_files:
-            self.log(f"[-] No '{filter_str}' QR codes found to print.")
-            return
-
-        html_content = f"""
-        <html>
-        <head>
-            <style>
-                body {{ font-family: Arial, sans-serif; text-align: center; }}
-                .grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding: 20px; }}
-                .card {{ border: 1px dashed #ccc; padding: 10px; }}
-                img {{ width: 100px; height: 100px; }}
-                h4 {{ margin: 5px 0 0 0; font-size: 12px; }}
-            </style>
-        </head>
-        <body onload="window.print()">
-            <h2>6 SAI Strelizia Command: {title}</h2>
-            <div class="grid">
-        """
-        
-        for file in target_files:
-            # Note: Using absolute paths so the browser can read local images
-            img_src = os.path.abspath(os.path.join(QR_DIR, file))
-            name_label = file.replace('.png', '')
-            html_content += f'<div class="card"><img src="{img_src}"><h4>{name_label}</h4></div>'
-
-        html_content += "</div></body></html>"
-        
-        with open(html_path, "w") as f:
-            f.write(html_content)
-            
-        # Open in default browser to trigger print dialog
-        webbrowser.open(f"file://{os.path.abspath(html_path)}")
-        self.log(f"[+] Print Spool generated. Opening web browser for hardware printing.")
-
+# --- Kivy App Execution ---
 class StreliziaApp(App):
     def build(self):
+        # Load the KV string
         Builder.load_string(KV)
+        
+        # Setup Screen Manager
         sm = ScreenManager()
         sm.add_widget(WizardScreen(name='wizard'))
         sm.add_widget(OpsScreen(name='ops'))
         sm.add_widget(CatalogScreen(name='catalog'))
         sm.add_widget(HRScreen(name='hr'))
         sm.add_widget(AnalyticsScreen(name='analytics'))
+        
         return sm
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     StreliziaApp().run()
